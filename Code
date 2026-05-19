@@ -1,0 +1,14 @@
+omniverse-clicker-multiplayer/
+│
+├── server/
+│   └── server.js
+│
+├── public/
+│   ├── game.html
+│   ├── client.js
+│   └── ui.js
+│
+├── shared/
+│   └── config.js
+│
+├── package.json
