@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Omniverse Clicker Engine</title>
+<style>
+body {
+  font-family: Arial;
+  background:#050814;
+  color:white;
+  text-align:center;
+}
+button {
+  padding:10px;
+  margin:5px;
+}
+.click { background:#00ffd5; font-size:18px; }
+.shop { background:#ffcc00; }
+</style>
+</head>
+<body>
+
+<h1>🌌 Omniverse Clicker Engine</h1>
+
+<div>Energy: <span id="energy">0</span></div>
+<div>Universe: <span id="universe">0</span></div>
+
+<br>
+
+<button class="click" onclick="Game.click()">CLICK ⚡</button>
+
+<br>
+
+<button class="shop" onclick="Game.upgrade('core')">Upgrade Core</button>
+<button class="shop" onclick="Game.upgrade('drone')">Add Drone</button>
+
+<script src="shared/config.js"></script>
+<script src="server/universeEngine.js"></script>
+<script src="server/balanceAI.js"></script>
+
+<script src="client/api.js"></script>
+<script src="client/ui.js"></script>
+<script src="client/game.js"></script>
+
+</body>
+</html>
