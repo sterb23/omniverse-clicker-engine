@@ -1,7 +1,7 @@
 omniverse-clicker-multiplayer/
 │
 ├── server/
-│   └── server.js
+│   └── server.js   (upgraded with rooms)
 │
 ├── public/
 │   ├── game.html
