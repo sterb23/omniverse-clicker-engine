@@ -9,38 +9,63 @@ const wss = new WebSocket.Server({ server });
 app.use(express.static("public"));
 
 /* =========================
-   GAME STATE (GLOBAL WORLD)
+   ROOMS SYSTEM
 ========================= */
 
-let state = {
-  energy: 0,
-  universe: 0,
-  hp: 1000,
-  maxHP: 1000
-};
+const rooms = {};
+
+/* create default room */
+function createRoom(id) {
+  rooms[id] = {
+    state: {
+      energy: 0,
+      universe: 0,
+      hp: 1000,
+      maxHP: 1000
+    },
+    players: new Set()
+  };
+}
+
+createRoom("lobby");
 
 /* =========================
-   BROADCAST TO ALL PLAYERS
+   GET ROOM
 ========================= */
 
-function broadcast() {
-  const data = JSON.stringify({
+function getRoom(id) {
+  if (!rooms[id]) createRoom(id);
+  return rooms[id];
+}
+
+/* =========================
+   BROADCAST ROOM
+========================= */
+
+function broadcast(roomId) {
+  const room = rooms[roomId];
+
+  const msg = JSON.stringify({
     type: "state",
-    state
+    room: roomId,
+    state: room.state,
+    players: room.players.size
   });
 
   wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
+    if (client.roomId === roomId && client.readyState === WebSocket.OPEN) {
+      client.send(msg);
     }
   });
 }
 
 /* =========================
-   GAME LOGIC
+   DAMAGE SYSTEM
 ========================= */
 
-function damage(dmg) {
+function damage(room, dmg) {
+  const state = room.state;
+
   state.hp -= dmg;
 
   if (state.hp <= 0) {
@@ -51,37 +76,82 @@ function damage(dmg) {
 }
 
 /* =========================
-   CONNECTIONS
+   CONNECTION HANDLING
 ========================= */
 
 wss.on("connection", (ws) => {
 
-  // send initial state
-  ws.send(JSON.stringify({ type: "state", state }));
+  ws.roomId = "lobby";
+  const room = getRoom(ws.roomId);
+
+  room.players.add(ws);
+
+  ws.send(JSON.stringify({
+    type: "state",
+    room: ws.roomId,
+    state: room.state,
+    players: room.players.size
+  }));
+
+  broadcast(ws.roomId);
 
   ws.on("message", (msg) => {
     const data = JSON.parse(msg);
 
-    if (data.type === "click") {
-      state.energy += data.power;
-      damage(data.power);
+    /* =====================
+       SWITCH ROOM
+    ===================== */
+    if (data.type === "joinRoom") {
 
-      broadcast();
+      room.players.delete(ws);
+
+      ws.roomId = data.room;
+      const newRoom = getRoom(ws.roomId);
+      newRoom.players.add(ws);
+
+      ws.send(JSON.stringify({
+        type: "state",
+        room: ws.roomId,
+        state: newRoom.state,
+        players: newRoom.players.size
+      }));
+
+      broadcast(ws.roomId);
+      return;
     }
+
+    /* =====================
+       CLICK EVENT
+    ===================== */
+    if (data.type === "click") {
+      const room = getRoom(ws.roomId);
+
+      room.state.energy += data.power;
+      damage(room, data.power);
+
+      broadcast(ws.roomId);
+    }
+  });
+
+  ws.on("close", () => {
+    const room = getRoom(ws.roomId);
+    room.players.delete(ws);
   });
 });
 
 /* =========================
-   SERVER TICK (AUTO SYSTEM)
+   GLOBAL TICK
 ========================= */
 
 setInterval(() => {
-  state.energy += 1; // passive gain
-  broadcast();
+  for (const id in rooms) {
+    rooms[id].state.energy += 1;
+    broadcast(id);
+  }
 }, 1000);
 
 /* =========================
-   START SERVER
+   START
 ========================= */
 
 server.listen(3000, () => {
